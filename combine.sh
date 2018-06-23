@@ -1,23 +1,38 @@
 #!/bin/bash
 #
-# Combines multiple git repositories into a single monolithic repository.
-# For example, this could be useful for backing up multiple GitHub classroom
-# repositories into a single repository.
+# Combines multiple git repositories into a single monolithic repository
+# while still retaining the history from each repository. For example, this 
+# could be useful for backing up multiple GitHub classroom repositories into a 
+# single repository.
 # 
 # Maintainer: Nick Pleatsikas <nick@pleatsikas.me>
 
-autoclone_repository () {
+autobuild_repository () {
   # Function arguments.
   local source_folder="$1"
   local repo="$2"
 
   # Check to make sure the clone command worked. If not, create a folder in the
   # current directory with the name of the repository.
-  if [[ $(git clone "$repo") -eq 0 ]]; then
+  if [[ $(git clone "$repo" 2> /dev/null) -eq 1 ]]; then
     echo "Repository cloned."
   else
     echo "No valid repository url provided, creating folder in $(pwd)/$repo"
     mkdir "$repo"
+
+    # Initialize repository if the repository wasn't cloned from a remote.
+    # Keep location of current directory.
+    local working_directory
+    working_directory=$(pwd)
+
+    # Change into the repo directory and quietly initialize repository.
+    cd "$repo" || return
+    git init --quiet
+
+    # Create a blank .gititnore file.
+    touch .gitignore && git add .gitignore && git commit -m "Monorepo init."
+
+    cd "$working_directory" || return
   fi
 }
 
@@ -43,7 +58,7 @@ merge_repos () {
 
 cleanup () {
   # Function arguments.
-  local source_folder"$1"
+  local source_folder="$1"
 
   # Remove only folders. Leave files in the directory untouched.
   rm -rf "${source_folder:?}/*/"
@@ -55,7 +70,7 @@ main () {
   if [[ $# -lt 1 ]]; then
     echo "No source folder provided. Exiting..."
     exit
-  elif [[ $1 -eq "--*" ]]; then
+  elif [[ $1 = "--"* ]]; then
     echo "No source folder provided. Exiting..."
     exit
   fi
@@ -76,7 +91,7 @@ main () {
   # Check for program flags.
   while [[ ! $# -eq 0 ]]; do
     case "$1" in
-      --repository=* | --repo=*)
+      --repository=* | --repo=* | --folder=*)
         # Use IFS to split repository folder/url after equals sign.
         IFS="=" read -ra LOC <<< "$1"
         repo_location="${LOC[1]}"
@@ -85,6 +100,7 @@ main () {
         ;;
       --clean | -c)
         clean_old_repositories=true
+        ;;
     esac
     shift
   done
@@ -97,7 +113,7 @@ main () {
   fi
 
   # Clone the repository or generate a new folder.
-  autoclone_repository "$source_folder" "$repo_location"
+  autobuild_repository "$source_folder" "$repo_location"
 
   # Merge the repositories together.
   merge_repos "$source_folder" "$repo_location"
