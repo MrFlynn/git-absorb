@@ -14,9 +14,8 @@ autobuild_repository () {
 
   # Check to make sure the clone command worked. If not, create a folder in the
   # current directory with the name of the repository.
-  if [[ $(git clone "$repo" 2> /dev/null) -eq 1 ]]; then
-    echo "Repository cloned."
-  else
+  git clone "$repo" 1> /dev/null || {
+    # Failing condition; create a new folder and initialize it.
     echo "No valid repository url provided, creating folder in $(pwd)/$repo"
     mkdir "$repo"
 
@@ -29,31 +28,42 @@ autobuild_repository () {
     cd "$repo" || return
     git init --quiet
 
-    # Create a blank .gititnore file.
-    touch .gitignore && git add .gitignore && git commit -m "Monorepo init."
-
     cd "$working_directory" || return
-  fi
+  }
 }
 
 merge_repos () {
   # Function arguments.
   local source_folder="$1"
-  local repo_location="$2"
+  local mono_repo_location="$2"
 
-  # Copy the contents of the folder containin each repo into the mono-repo
-  # directory.
-  cp -r "$source_folder/." "$repo_location"
+  # Array for holding repo subfolder names.
+  local repo_names=()
 
-  for dir in $repo_location/*; do
-    # Remove the .git/ folder from each copied repository.
-    rm -rf "$dir/.git/"
+  # Move into location of monorepo.
+  cd "$mono_repo_location" || return
 
-    # Append the contents of each repository's .gitignore to the root
-    # .gitignore and then remove the original. 
-    cat "$dir/.gitignore" >> "$repo_location/.gitignore"
-    rm "$dir/.gitignore"
+  # Set shell extended globbing.
+  shopt -s extglob
+
+  for repo in $source_folder/*; do
+    # Get name of repository.
+    local current_repo_name
+    current_repo_name=$(basename "$repo")
+
+    # Append to array.
+    repo_names+=("$current_repo_name")
+
+    # Add the remote and merge everything into the monorepo.
+    git remote add -f "$current_repo_name" "$repo"
+    git merge "$current_repo_name/master" --allow-unrelated-histories
+
+    # Move all matching files to subdirectory.
+    git mv !(*(.git)|"$current_repo_name"|..|.) "$current_repo_name"
   done
+
+  # Unset extended globbing.
+  shopt -u extglob
 }
 
 cleanup () {
@@ -82,7 +92,7 @@ main () {
   # Variable that determines whether or not repository should be created and
   # its location.
   local create_repo_folder=false
-  local repo_location
+  local mono_repo_location
 
   # Flag for weather or not the old repositories should be removed when the
   # script is done.
@@ -94,7 +104,12 @@ main () {
       --repository=* | --repo=* | --folder=*)
         # Use IFS to split repository folder/url after equals sign.
         IFS="=" read -ra LOC <<< "$1"
-        repo_location="${LOC[1]}"
+        mono_repo_location="${LOC[1]}"
+
+        if [[ -z "$mono_repo_location" ]]; then
+          echo "No valid target repository or folder provided."
+          exit
+        fi
 
         create_repo_folder=true
         ;;
@@ -109,14 +124,14 @@ main () {
   # name of the repository folder to monorepo with the PID of this
   # script appended.
   if [[ $create_repo_folder != true ]]; then
-    repo_location="monorepo-$$"
+    mono_repo_location="monorepo-$$"
   fi
 
   # Clone the repository or generate a new folder.
-  autobuild_repository "$source_folder" "$repo_location"
+  autobuild_repository "$source_folder" "$mono_repo_location"
 
   # Merge the repositories together.
-  merge_repos "$source_folder" "$repo_location"
+  merge_repos "$source_folder" "$mono_repo_location"
 
   if [[ $clean_old_repositories == true ]]; then
     cleanup "$source_folder"
