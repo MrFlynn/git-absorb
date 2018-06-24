@@ -79,8 +79,17 @@ merge_repos () {
 }
 
 ignore_combiner () {
-  #TODO(nick): Write this function. Figure out how to use find to write to file.
-  true
+  # Function arguments.
+  local mono_repo_location="$1"
+
+  pushd . || return
+  cd "$mono_repo_location" || return
+  
+  # Append each gitignore to the global ignore file and remove the files.
+  find . -type f -name ".gitignore" -exec cat {} + >> .gitignore
+  find . -type f -name ".gitignore" -exec rm {} +
+
+  popd || return
 }
 
 cleanup () {
@@ -159,7 +168,7 @@ main () {
 
   # Call function that combines all ignores into a single file if flag is set.
   if [[ $combine_ignores == true ]]; then
-    ignore_combiner "$source_folder"
+    ignore_combiner "$mono_repo_location"
   fi
 
   # Clean old copies of the copied repositories.
