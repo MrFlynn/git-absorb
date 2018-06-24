@@ -104,11 +104,33 @@ cleanup () {
   rm -rf "${source_folder:?}/*/"
 }
 
+usage () {
+  cat <<EOF
+Usage: combine.sh [FOLDER] [OPTIONS]
+  Combines multiple repositories into one while preserving history.
+
+  The folder argument is required for the script to run.
+
+  Options:
+      --repository=URL/FOLDER Link to remote for combined repository or path to
+                              folder for initializing a new repository.
+      --combine-ignores       Combine the .gitignore files from each repository
+                              into a single .gitignore at the root of the new
+                              repository.
+  -c  --clean                 Remove local copies of repositories merged into
+                              the new repository when script has finished.
+  -h  --help                  Display this menu and exit immediately.
+EOF
+}
+
 main () {
   # Check to make sure source folder where each repository is located is
   # provided.
   if [[ $# -lt 1 ]]; then
     echo "No source folder provided. Exiting..."
+    exit
+  elif [[ $1 = "--help" || $1 = "-h" ]]; then
+    usage
     exit
   elif [[ $1 = "--"* ]]; then
     echo "No source folder provided. Exiting..."
@@ -160,6 +182,10 @@ main () {
         ;;
       --clean | -c)
         clean_old_repositories=true
+        ;;
+      --help | -h)
+        usage
+        exit
         ;;
     esac
     shift
