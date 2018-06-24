@@ -6,7 +6,8 @@
 # single repository.
 # 
 # Maintainer: Nick Pleatsikas <nick@pleatsikas.me>
-# shellcheck disable=SC2207
+#
+# shellcheck disable=SC2207,SC2145
 
 autobuild_repository () {
   # Function arguments.
@@ -22,11 +23,11 @@ autobuild_repository () {
 
     # Initialize repository if the repository wasn't cloned from a remote.
     # Change into the repo directory and quietly initialize repository.
-    pushd . || return
+    pushd . > /dev/null 2>&1 || return
     cd "$repo" || return
     git init --quiet
 
-    popd || return
+    popd > /dev/null 2>&1 || return
   }
 }
 
@@ -38,17 +39,19 @@ merge_repos () {
   # Array for holding repo subfolder names.
   local repo_names=()
 
-  pushd . || return  
+  pushd . > /dev/null 2>&1 || return 
   cd "$mono_repo_location" || return
 
   # Set shell extended globbing.
   shopt -s extglob
 
-  for repo in $source_folder/*; do
+  for repo in "$source_folder/"*; do
     # Get name of repository.
     local current_repo_name
     current_repo_name=$(basename "$repo")
     repo_names+=("$current_repo_name")
+
+    mkdir "$current_repo_name"
 
     # Add the remote and merge everything into the monorepo.
     git remote add -f "$current_repo_name" "$repo"
@@ -57,7 +60,7 @@ merge_repos () {
     # Match all properly moveable files in the current directory.
     local current_repo_files
     local all_moveable_files
-    current_repo_files=$(echo !(*(.git)|..|.))
+    current_repo_files=($(echo !(*(.git)|..|.)))
     
     # Remove all occurences of names of repo folders. Equivalent to set
     # operation A - B.
@@ -65,27 +68,32 @@ merge_repos () {
       <(printf '%s\n' "${repo_names[@]}") \
       <(printf '%s\n' "${current_repo_files[@]}")))
 
-    git mv "${all_moveable_files[@]}" "$repo"
+    echo "Incoming Files: ${all_moveable_files[@]}"
+
+    git mv "${all_moveable_files[@]}" "$current_repo_name"
+    git commit -m "Merged & moved $current_repo_name." > /dev/null 2>&1
   done
 
   # Unset extended globbing.
   shopt -u extglob
 
-  popd || return
+  popd > /dev/null 2>&1 || return
 }
 
 ignore_combiner () {
   # Function arguments.
   local mono_repo_location="$1"
 
-  pushd . || return
+  pushd . > /dev/null 2>&1 || return
   cd "$mono_repo_location" || return
   
   # Append each gitignore to the global ignore file and remove the files.
-  find . -type f -name ".gitignore" -exec cat {} + >> .gitignore
-  find . -type f -name ".gitignore" -exec rm {} +
+  find . -mindepth 1 -type f -name ".gitignore" -exec cat {} + >> .gitignore 
+  find . -mindepth 2 -type f -name ".gitignore" -exec rm {} +
 
-  popd || return
+  git add ./* .gitignore && git commit -m "Merged .gitignores." > /dev/null 2>&1
+
+  popd > /dev/null 2>&1 || return
 }
 
 cleanup () {
@@ -108,7 +116,15 @@ main () {
   fi
 
   # Folder containing all repositories.
-  local source_folder="$1"
+  local source_folder
+
+  IFS="/" read -ra DIR_PATH <<< "$1"
+  if [[ $1 = "${DIR_PATH[0]}"* ]] && [[ ! -z "${DIR_PATH[0]}" ]]; then
+    source_folder="$(pwd)/$1"
+  else
+    source_folder="$1"
+  fi
+
   shift
 
   # Variable that determines whether or not repository should be created and
@@ -153,7 +169,7 @@ main () {
   # name of the repository folder to monorepo with the PID of this
   # script appended.
   if [[ $create_repo_folder != true ]]; then
-    mono_repo_location="monorepo-$$"
+    mono_repo_location="$(pwd)/monorepo-$$"
   fi
 
   # Clone the repository or generate a new folder.
@@ -171,6 +187,8 @@ main () {
   if [[ $clean_old_repositories == true ]]; then
     cleanup "$source_folder"
   fi
+
+  printf '\xE2\x9C\xA8 Merge success!\n'
 }
 
 main "$@"
