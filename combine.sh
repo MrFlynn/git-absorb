@@ -21,15 +21,12 @@ autobuild_repository () {
     mkdir "$repo"
 
     # Initialize repository if the repository wasn't cloned from a remote.
-    # Keep location of current directory.
-    local working_directory
-    working_directory=$(pwd)
-
     # Change into the repo directory and quietly initialize repository.
+    pushd . || return
     cd "$repo" || return
     git init --quiet
 
-    cd "$working_directory" || return
+    popd || return
   }
 }
 
@@ -41,8 +38,7 @@ merge_repos () {
   # Array for holding repo subfolder names.
   local repo_names=()
 
-  local working_directory
-  working_directory=$(pwd)  
+  pushd . || return  
   cd "$mono_repo_location" || return
 
   # Set shell extended globbing.
@@ -75,7 +71,7 @@ merge_repos () {
   # Unset extended globbing.
   shopt -u extglob
 
-  cd "$working_directory" || return
+  popd || return
 }
 
 ignore_combiner () {
