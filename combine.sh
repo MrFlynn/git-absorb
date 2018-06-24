@@ -6,6 +6,7 @@
 # single repository.
 # 
 # Maintainer: Nick Pleatsikas <nick@pleatsikas.me>
+# shellcheck disable=SC2207
 
 autobuild_repository () {
   # Function arguments.
@@ -40,7 +41,8 @@ merge_repos () {
   # Array for holding repo subfolder names.
   local repo_names=()
 
-  # Move into location of monorepo.
+  local working_directory
+  working_directory=$(pwd)  
   cd "$mono_repo_location" || return
 
   # Set shell extended globbing.
@@ -50,20 +52,35 @@ merge_repos () {
     # Get name of repository.
     local current_repo_name
     current_repo_name=$(basename "$repo")
-
-    # Append to array.
     repo_names+=("$current_repo_name")
 
     # Add the remote and merge everything into the monorepo.
     git remote add -f "$current_repo_name" "$repo"
     git merge "$current_repo_name/master" --allow-unrelated-histories
 
-    # Move all matching files to subdirectory.
-    git mv !(*(.git)|"$current_repo_name"|..|.) "$current_repo_name"
+    # Match all properly moveable files in the current directory.
+    local current_repo_files
+    local all_moveable_files
+    current_repo_files=$(echo !(*(.git)|..|.))
+    
+    # Remove all occurences of names of repo folders. Equivalent to set
+    # operation A - B.
+    all_moveable_files=($(comm -13 \
+      <(printf '%s\n' "${repo_names[@]}") \
+      <(printf '%s\n' "${current_repo_files[@]}")))
+
+    git mv "${all_moveable_files[@]}" "$repo"
   done
 
   # Unset extended globbing.
   shopt -u extglob
+
+  cd "$working_directory" || return
+}
+
+ignore_combiner () {
+  #TODO(nick): Write this function. Figure out how to use find to write to file.
+  true
 }
 
 cleanup () {
@@ -98,6 +115,10 @@ main () {
   # script is done.
   local clean_old_repositories=false
 
+  # User set flag that combines each .gitignore into a single gitignore at
+  # the root of the monorepo.
+  local combine_ignores=false
+
   # Check for program flags.
   while [[ ! $# -eq 0 ]]; do
     case "$1" in
@@ -112,6 +133,9 @@ main () {
         fi
 
         create_repo_folder=true
+        ;;
+      --combine-ignores)
+        combine_ignores=true
         ;;
       --clean | -c)
         clean_old_repositories=true
@@ -133,6 +157,12 @@ main () {
   # Merge the repositories together.
   merge_repos "$source_folder" "$mono_repo_location"
 
+  # Call function that combines all ignores into a single file if flag is set.
+  if [[ $combine_ignores == true ]]; then
+    ignore_combiner "$source_folder"
+  fi
+
+  # Clean old copies of the copied repositories.
   if [[ $clean_old_repositories == true ]]; then
     cleanup "$source_folder"
   fi
