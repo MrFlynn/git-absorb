@@ -9,10 +9,19 @@
 #
 # shellcheck disable=SC2207,SC2145,SC2005
 
+#######################################
+# Clones or initializes new local repo
+# for monorepo.
+# Globals:
+#   None
+# Arguments:
+#   repo: repository folder
+# Returns:
+#   None
+#######################################
 autobuild_repository () {
   # Function arguments.
-  local source_folder="$1"
-  local repo="$2"
+  local repo="$1"
 
   # Check to make sure the clone command worked. If not, create a folder in the
   # current directory with the name of the repository.
@@ -31,6 +40,19 @@ autobuild_repository () {
   }
 }
 
+#######################################
+# Iterates through repositories in 
+# specified folder and merges them into
+# the mono repo.
+# Globals:
+#   None
+# Arguments:
+#   source_folder: folder containing repos to be merged.
+#   mono_repo_location: folder containing mono repo. Individual repos are 
+#                       cloned into this.
+# Returns:
+#   None
+#######################################
 merge_repos () {
   # Function arguments.
   local source_folder="$1"
@@ -55,7 +77,7 @@ merge_repos () {
 
     # Add the remote and merge everything into the monorepo.
     git remote add -f "$current_repo_name" "$repo"
-    git merge "$current_repo_name/master" --allow-unrelated-histories
+    git merge "$current_repo_name/master" --allow-unrelated-histories --no-edit
 
     # Match all properly moveable files in the current directory.
     local current_repo_files
@@ -68,9 +90,21 @@ merge_repos () {
       <(printf '%s\n' "${repo_names[@]}") \
       <(printf '%s\n' "${current_repo_files[@]}")))
 
-    echo "Incoming Files: ${all_moveable_files[@]}"
-
     git mv "${all_moveable_files[@]}" "$current_repo_name"
+    if [[ $(uname -s) = "Darwin" ]]; then
+      # This is a fix for the Mac since Apple ships a super old version of bash.
+      # Globbing doesn't quite work correctly in old versions of bash.
+      local dotfiles
+      dotfiles=($(echo .@(!(|.|git))))
+
+      if [[ "${dotfiles[0]}" != ".@(!(|.|git))" ]]; then # This is such a hack.
+        echo "Incoming Files: ${all_moveable_files[@]} ${dotfiles[@]}"
+        git mv "${dotfiles[@]}" "$current_repo_name"
+      fi
+    else
+      echo "Incoming Files: ${all_moveable_files[@]}"
+    fi
+
     git commit -m "Merged & moved $current_repo_name." > /dev/null 2>&1
   done
 
@@ -78,13 +112,24 @@ merge_repos () {
   shopt -u extglob
 
   # Reset remote url of repository if appliable.
-  if [[ $(validate_git_url "$source_folder") -eq 0 ]]; then
+  if [[ $(validate_git_url "$source_folder") = 0 ]]; then
     git remote add "$source_folder"
   fi
 
   popd > /dev/null 2>&1 || return
 }
 
+#######################################
+# Combines all .gitignore files in all 
+# subdirectories of the specified folder
+# into on. Previous ignores are removed.
+# Globals:
+#   None
+# Arguments:
+#   mono_repo_location: folder containing all merged sub repositories.
+# Returns:
+#   None
+#######################################
 ignore_combiner () {
   # Function arguments.
   local mono_repo_location="$1"
@@ -101,14 +146,36 @@ ignore_combiner () {
   popd > /dev/null 2>&1 || return
 }
 
+#######################################
+# Checks to see whether or not a url
+# contains a valid git repository.
+# Globals:
+#   None
+# Arguments:
+#   source_url: url of git repository to check.
+# Returns:
+#   Exit code of `git ls-remote` command.
+#######################################
 validate_git_url () {
   # Function arguments.
   local source_url="$1"
 
   # List refs in the remote repository and return the command's exit code.
-  return "$(git ls-remote "$source_url" --quiet --exit-code)"
+  git ls-remote "$source_url" --quiet --exit-code > /dev/null 2>&1
+  echo $?
 }
 
+#######################################
+# Removes all local copies of merged
+# repositories.
+# Globals:
+#   None
+# Arguments:
+#   source_folder: folder containing individual repos that have already been
+#                  merged.
+# Returns:
+#   None
+#######################################
 cleanup () {
   # Function arguments.
   local source_folder="$1"
@@ -117,8 +184,17 @@ cleanup () {
   rm -rf "${source_folder:?}/*/"
 }
 
+#######################################
+# Prints help menu.
+# Globals:
+#   None
+# Arguments:
+#   None
+# Returns:
+#   None
+#######################################
 usage () {
-  cat <<EOF
+  cat << EOF
 Usage: combine.sh [FOLDER] [OPTIONS]
   Combines multiple repositories into one while preserving history.
 
@@ -136,6 +212,16 @@ Usage: combine.sh [FOLDER] [OPTIONS]
 EOF
 }
 
+#######################################
+# Main function. Parses script args and
+# flags and calls functions to run.
+# Globals:
+#   None
+# Arguments:
+#   $@: All arguments passed to script.
+# Returns:
+#   None
+#######################################
 main () {
   # Check to make sure source folder where each repository is located is
   # provided.
@@ -212,7 +298,7 @@ main () {
   fi
 
   # Clone the repository or generate a new folder.
-  autobuild_repository "$source_folder" "$mono_repo_location"
+  autobuild_repository "$mono_repo_location"
 
   # Merge the repositories together.
   merge_repos "$source_folder" "$mono_repo_location"
