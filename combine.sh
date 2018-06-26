@@ -7,7 +7,7 @@
 # 
 # Maintainer: Nick Pleatsikas <nick@pleatsikas.me>
 #
-# shellcheck disable=SC2207,SC2145
+# shellcheck disable=SC2207,SC2145,SC2005
 
 autobuild_repository () {
   # Function arguments.
@@ -77,6 +77,11 @@ merge_repos () {
   # Unset extended globbing.
   shopt -u extglob
 
+  # Reset remote url of repository if appliable.
+  if [[ $(validate_git_url "$source_folder") -eq 0 ]]; then
+    git remote add "$source_folder"
+  fi
+
   popd > /dev/null 2>&1 || return
 }
 
@@ -94,6 +99,14 @@ ignore_combiner () {
   git add ./* .gitignore && git commit -m "Merged .gitignores." > /dev/null 2>&1
 
   popd > /dev/null 2>&1 || return
+}
+
+validate_git_url () {
+  # Function arguments.
+  local source_url="$1"
+
+  # List refs in the remote repository and return the command's exit code.
+  return "$(git ls-remote "$source_url" --quiet --exit-code)"
 }
 
 cleanup () {
