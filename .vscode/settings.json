@@ -5,5 +5,7 @@
     "[shellscript]": {
         "editor.tabSize": 2,
         "editor.insertSpaces": true,
-    }
+    },
+    "shellcheck.enable": true,
+    "shellcheck.run": "onSave"
 }

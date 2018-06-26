@@ -43,3 +43,6 @@ These were my goals when writing this program:
 data manipulation, arrays, error checking and handling, and script flags.
 2. Develop a better understanding of git--more specifically with merges. How
 to combine multiple histories seamlessly was important.
+3. Familiarize myself with code linting tools, particularly those that exist for
+shell script. I am using [ShellCheck](https://github.com/koalaman/shellcheck)
+as my linter for this project.
