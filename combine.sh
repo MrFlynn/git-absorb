@@ -7,7 +7,7 @@
 # 
 # Maintainer: Nick Pleatsikas <nick@pleatsikas.me>
 #
-# shellcheck disable=SC2207,SC2145,SC2005
+# shellcheck disable=SC2207,SC2145,SC2005,SC2035
 
 #######################################
 # Clones or initializes new local repo
@@ -15,17 +15,21 @@
 # Globals:
 #   None
 # Arguments:
-#   repo: repository folder
+#   repo: repository folder or url
 # Returns:
-#   None
+#   repo_dir: repository folder.
 #######################################
 autobuild_repository () {
   # Function arguments.
   local repo="$1"
 
+  # Original list of directories.
+  local orig_dir_list
+  IFS=" " read -ra orig_dir_list <<< "$(echo */)"
+
   # Check to make sure the clone command worked. If not, create a folder in the
   # current directory with the name of the repository.
-  git clone "$repo" 1> /dev/null || {
+  if git clone "$repo"; then
     # Failing condition; create a new folder and initialize it.
     echo "No valid repository url provided, creating folder in $(pwd)/$repo"
     mkdir "$repo"
@@ -37,7 +41,17 @@ autobuild_repository () {
     git init --quiet
 
     popd > /dev/null 2>&1 || return
-  }
+  fi
+
+  # Get current list of files.
+  local current_dir_list
+  IFS=" " read -ra current_dir_list <<< "$(echo */)"
+
+  # Name of directory that was just cloned/created.
+  local repo_dir
+  repo_dir="$(comm -13 <(printf '%s\n' "${orig_dir_list[@]}") <(printf '%s\n' "${current_dir_list[@]}"))"
+
+  echo "$repo_dir"
 }
 
 #######################################
@@ -249,9 +263,10 @@ main () {
   shift
 
   # Variable that determines whether or not repository should be created and
-  # its location.
+  # its location (url or folder name). Also store the final folder name.
   local create_repo_folder=false
   local mono_repo_location
+  local mono_repo_folder
 
   # Flag for weather or not the old repositories should be removed when the
   # script is done.
@@ -298,14 +313,14 @@ main () {
   fi
 
   # Clone the repository or generate a new folder.
-  autobuild_repository "$mono_repo_location"
+  mono_repo_folder="$(autobuild_repository "$mono_repo_location")"
 
   # Merge the repositories together.
-  merge_repos "$source_folder" "$mono_repo_location"
+  merge_repos "$source_folder" "$mono_repo_folder"
 
   # Call function that combines all ignores into a single file if flag is set.
   if [[ $combine_ignores == true ]]; then
-    ignore_combiner "$mono_repo_location"
+    ignore_combiner "$mono_repo_folder"
   fi
 
   # Clean old copies of the copied repositories.
