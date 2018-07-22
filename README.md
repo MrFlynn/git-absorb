@@ -8,14 +8,24 @@ The usefullness of this tool is mainly in its ability to automate the grouping
 of a collection of related repositories. For example, at my university many of
 my programming classes have separate repositories for each assignment. Using this
 program I can merge all those repositories together and back it up to my own 
-GitHub account, etc. Preserving the history of each repository is just a nice
-bonus.
+GitHub account, etc. I also think preserving the history from each repository
+is helpful feature to have, even in a cognitive sence. For me shows me how I 
+wrote code to solve a problem I may not remember how I solved six months from
+now.
 
-_Note:_ I don't really recommend using this to merge particularly complex repos.
+### Caveats: 
+I don't really recommend using this to merge particularly complex repos.
 I haven't tested this tool on repositories with more than a couple of branches 
 each, so YMMV with more complex repositories (i.e. avoid the `--clean` flag).
 
+Additionally, this tool doesn't check for hash collisions between two 
+separate repositories. I expect that is extremely unlikely to happen, and would 
+likely require effort in order to accomplish.
+
 ### How to Use:
+This script was tested on MacOS 10.12.6 and Fedora 28. Both were running Bash
+versions equal to or above 3.2.
+
 First, clone the repository. Next, if needed create a target remote repository.
 Finally, run the script. Use the `--help` flag to get familiar with the options,
 but I've also included a copy of the help screen below.
