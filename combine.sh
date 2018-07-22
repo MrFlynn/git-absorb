@@ -29,7 +29,7 @@ autobuild_repository () {
 
   # Check to make sure the clone command worked. If not, create a folder in the
   # current directory with the name of the repository.
-  if git clone "$repo"; then
+  if ! git clone "$repo"; then
     # Failing condition; create a new folder and initialize it.
     echo "No valid repository url provided, creating folder in $(pwd)/$repo"
     mkdir "$repo"
@@ -49,7 +49,8 @@ autobuild_repository () {
 
   # Name of directory that was just cloned/created.
   local repo_dir
-  repo_dir="$(comm -13 <(printf '%s\n' "${orig_dir_list[@]}") <(printf '%s\n' "${current_dir_list[@]}"))"
+  repo_dir="$(comm -13 <(printf '%s\n' "${orig_dir_list[@]}") \
+              <(printf '%s\n' "${current_dir_list[@]}"))"
 
   echo "$repo_dir"
 }
@@ -124,11 +125,6 @@ merge_repos () {
 
   # Unset extended globbing.
   shopt -u extglob
-
-  # Reset remote url of repository if appliable.
-  if [[ $(validate_git_url "$source_folder") = 0 ]]; then
-    git remote add "$source_folder"
-  fi
 
   popd > /dev/null 2>&1 || return
 }
@@ -327,6 +323,12 @@ main () {
   if [[ $clean_old_repositories == true ]]; then
     cleanup "$source_folder"
   fi
+
+  # Enter mono repo folder and unset upstream.
+  pushd . > /dev/null 2>&1 || return
+  cd "$mono_repo_folder" || return
+  git branch --unset-upstream
+  popd > /dev/null 2>&1 || return
 
   printf '\xE2\x9C\xA8 Merge success!\n'
 }
