@@ -250,7 +250,7 @@ main () {
   local source_folder
 
   IFS="/" read -ra DIR_PATH <<< "$1"
-  if [[ $1 = "${DIR_PATH[0]}"* ]] && [[ ! -z "${DIR_PATH[0]}" ]]; then
+  if [[ $1 = "${DIR_PATH[0]}"* ]] && [[ -n "${DIR_PATH[0]}" ]]; then
     source_folder="$(pwd)/$1"
   else
     source_folder="$1"

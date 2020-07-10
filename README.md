@@ -1,4 +1,4 @@
-# repo-combiner
+# combine.sh
 This tool merges multiple local git repositories into a single monolithic 
 repository while still maintaining the history from each combined repository.
 Each merged repository is located in a subdirectory with the name of the source
@@ -30,7 +30,7 @@ First, clone the repository. Next, if needed create a target remote repository.
 Finally, run the script. Use the `--help` flag to get familiar with the options,
 but I've also included a copy of the help screen below.
 ```
-$ repo-combiner/combine.sh --help
+$ combine.sh/combine.sh --help
 Usage: combine.sh [FOLDER] [OPTIONS]
   Combines multiple repositories into one while preserving history.
 
