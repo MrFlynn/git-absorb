@@ -1,0 +1,25 @@
+.TH GIT-ABSORB 1
+.SH NAME
+git-absorb \- Combines multiple repositories into one while preserving history
+.SH SYNOPSIS
+.B git absorb
+.IR FOLDER ... 
+[--clean | -c]
+.SH DESCRIPTION
+.ll 80
+Combines multiple git repositories into a single monolithic repository
+while still retaining the history from each repository. For example, this 
+could be useful for backing up multiple GitHub classroom repositories into a 
+single repository.
+.SH OPTIONS
+.TP
+.I FOLDER
+Path to repository to merge into the current repository.
+.TP
+.BR \-c ", " \-\-clean
+.ll 80
+Remove local cop(y)(ies) of the repositor(ies)(y) being merged into the current
+repository.
+.TP
+.BR \-h ", " \-\-help
+Display this menu.
