@@ -21,11 +21,23 @@ Additionally, this tool doesn't check for hash collisions between two
 separate repositories. I expect that is extremely unlikely to happen, and would 
 likely require effort in order to accomplish.
 
+## Installation
+Homebrew is the recommended installationation method. Just run the following
+commands to get started.
+
+```bash
+$ brew tap mrflynn/git-absorb https://github.com/mrflynn/git-absorb
+$ brew install mrflynn/git-absorb/git-absorb
+```
+
+Alternatively, you can install the tool manually by cloning this repository 
+and adding `bin/` and `man/` to your `PATH` and 
+`MANPATH` variables, respectively.
+
 ## Usage
-Installation instructions coming soon...
 ```
 $ git absorb --help
-Usage: combine.sh [FOLDER [FOLDER ...]] [OPTIONS]
+Usage: git absorb [FOLDER ...] [OPTIONS]
   Combines multiple repositories into one while preserving history.
 
   The folder argument is required for the script to run.
