@@ -72,7 +72,7 @@ cleanup () {
 #######################################
 usage () {
   cat << EOF
-Usage: git absorb [FOLDER [FOLDER ...]] [OPTIONS]
+Usage: git absorb [FOLDER ...] [OPTIONS]
   Combines multiple repositories into one while preserving history.
 
   The folder argument is required for the script to run.
@@ -95,6 +95,11 @@ EOF
 #   None
 #######################################
 main () {
+  # Make sure we're in a git repository.
+  if ! git -C "$PWD" rev-parse; then
+    exit 1
+  fi
+
   # Check to make sure source folder where each repository is located is
   # provided.
   if [[ $# -lt 1 ]]; then
@@ -120,6 +125,11 @@ main () {
     fi
     shift
   done
+
+  if [[ "${#source_folders[@]}" -eq 0 ]]; then
+    >&2 echo "Please provide one or more folders"
+    exit 1
+  fi
 
   # Flag for weather or not the old repositories should be removed when the
   # script is done.
