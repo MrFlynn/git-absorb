@@ -26,8 +26,8 @@ Homebrew is the recommended installationation method. Just run the following
 commands to get started.
 
 ```bash
-$ brew tap mrflynn/git-absorb https://github.com/mrflynn/git-absorb
-$ brew install mrflynn/git-absorb/git-absorb
+$ brew tap mrflynn/cider
+$ brew install mrflynn/cider/git-absorb
 ```
 
 Alternatively, you can install the tool manually by cloning this repository 
